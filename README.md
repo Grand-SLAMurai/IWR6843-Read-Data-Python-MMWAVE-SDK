@@ -9,14 +9,20 @@ This code was also developed using the MMWAVE SDK version 3.05.00.04 parser demo
 TO RUN:
 ---
 
-### Download dependenciesa (could venv)
-- `numpy`
-- `pyserial`
-- `PyQt5`
-- `pyqtgraph`
+### Install dependencies
 
-```shell
-python -m pip install pyserial numpy pyqt5 pyqtgraph
+1. Use Python 3.12 (download [here](https://www.python.org/downloads/release/python-3120/), need for Open3D version)
+2. Create virtual environment
+```bash
+py -3.12 -m venv .venv
+```
+3. Activate virtual environment
+```bash
+.\.venv\Scripts\Activate.ps1
+```
+4. Install requirements
+```bash
+python -m pip install -r requirements.txt
 ```
 
 ### Edit script
@@ -24,4 +30,11 @@ Make sure the `COM` ports are selected to the correct ports in the `mmw_parse_sc
 
 ### Run
 1. Make sure no other program is using the needed COM ports.
-2. 
+2. Run python script for 2D
+```bash
+python mmw_parse_script.py
+```
+3. Run python script for 3D
+```bash
+python 3D_mmw_parse_script.py
+```

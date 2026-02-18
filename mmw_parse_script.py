@@ -50,8 +50,13 @@ import sys
 from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtGui
+
 # import the parser function 
 from parser_mmw_demo import parser_one_mmw_demo_output_packet
+
+# keyboard interrupt support
+import signal
+import sys
 
 # Change the configuration file name
 configFileName = 'xwr68xxconfig.cfg'
@@ -313,7 +318,7 @@ class MyWidget(pg.GraphicsLayoutWidget):
         super().__init__(parent=parent)
 
         # Plot
-        self.plotItem = self.addPlot(title="Lidar points")
+        self.plotItem = self.addPlot(title="radar points")
         self.plotItem.setLabel('bottom', 'X (m)')
         self.plotItem.setLabel('left', 'Y (m)')
 
@@ -327,6 +332,12 @@ class MyWidget(pg.GraphicsLayoutWidget):
         self.timer.setInterval(100)  # ms
         self.timer.timeout.connect(self.onNewData)
         self.timer.start()
+
+        # lock aspect ratio
+        self.plotItem.getViewBox().setAspectLocked(True)
+
+        # draw origin
+        self.plotItem.addItem(pg.ScatterPlotItem([0],[0], symbol='o', size=8))
 
     def setData(self, x, y):
         self.plotDataItem.setData(x, y)
@@ -349,9 +360,9 @@ class MyWidget(pg.GraphicsLayoutWidget):
 
 
 def main():
-    CLIport, Dataport = serialConfig(configFileName)
+    global CLIport, Dataport, configParameters
 
-    global configParameters
+    CLIport, Dataport = serialConfig(configFileName)
     configParameters = parseConfigFile(configFileName)
 
     app = QtWidgets.QApplication([])
@@ -362,7 +373,41 @@ def main():
     win.show()
     win.resize(800, 600)
 
+    def shutdown(*args):
+        # stop timer so it doesn't keep reading
+        try:
+            win.timer.stop()
+        except Exception:
+            pass
+
+        # try to stop sensor + close ports
+        try:
+            CLIport.write(b"sensorStop\n")
+            time.sleep(0.05)
+        except Exception:
+            pass
+
+        for p in (CLIport, Dataport):
+            try:
+                p.close()
+            except Exception:
+                pass
+
+        # quit Qt app
+        try:
+            app.quit()
+        except Exception:
+            pass
+
+    # Ctrl+C handler
+    signal.signal(signal.SIGINT, lambda sig, frame: shutdown())
+
+    # Also shut down if the window is closed
+    app.aboutToQuit.connect(shutdown)
+
+    # Start event loop
     app.exec_()
+
 
     CLIport.write(('sensorStop\n').encode())
     CLIport.close()

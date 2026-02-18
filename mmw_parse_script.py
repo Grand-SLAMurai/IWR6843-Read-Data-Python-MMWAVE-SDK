@@ -170,9 +170,10 @@ def readAndParseData14xx(Dataport, configParameters):
     # readBuffer = Dataport.read(Dataport.in_waiting)
     # chat recommended this change
     n = Dataport.in_waiting
-    if n < 32:
-        n = 32
+    if n < 4096:
+        n = 4096
     readBuffer = Dataport.read(n)
+
 
     byteVec = np.frombuffer(readBuffer, dtype = 'uint8')
     byteCount = len(byteVec)
@@ -319,8 +320,14 @@ class MyWidget(pg.GraphicsLayoutWidget):
 
         # Plot
         self.plotItem = self.addPlot(title="radar points")
-        self.plotItem.setLabel('bottom', 'X (m)')
-        self.plotItem.setLabel('left', 'Y (m)')
+        # self.plotItem.setLabel('bottom', 'X (m)')
+        # self.plotItem.setLabel('left', 'Y (m)')
+        
+        # Hide default box axes
+        self.plotItem.showAxis('left', False)
+        self.plotItem.showAxis('bottom', False)
+        self.plotItem.showAxis('right', False)
+        self.plotItem.showAxis('top', False)
 
         self.plotDataItem = self.plotItem.plot(
             [], [], pen=None,
@@ -338,6 +345,103 @@ class MyWidget(pg.GraphicsLayoutWidget):
 
         # draw origin
         self.plotItem.addItem(pg.ScatterPlotItem([0],[0], symbol='o', size=8))
+
+        # --- FORCE VIEW RANGE AROUND ORIGIN ---
+        # Fixed view around origin (prevents drifting)
+        R = float(configParameters.get("maxRange", 10.0))
+        vb = self.plotItem.getViewBox()
+        vb.enableAutoRange(False)
+        vb.setRange(xRange=(-R, R), yRange=(0, R), padding=0.0)  # forward-only Y
+
+        # Custom origin axes with tick marks
+        self._add_origin_axes_with_ticks(xlim=(-R, R), ylim=(0, R), tick_step=1.0, tick_len=0.2)
+
+        # Origin point
+        self.plotItem.addItem(pg.ScatterPlotItem([0], [0], symbol='o', size=10, brush=(120, 120, 255)))
+
+        # --- DRAW AXES THROUGH ORIGIN (CROSSHAIR) ---
+        # self.x0 = pg.InfiniteLine(pos=0, angle=90, movable=False)  # x=0 vertical
+        # self.y0 = pg.InfiniteLine(pos=0, angle=0,  movable=False)  # y=0 horizontal
+        # self.plotItem.addItem(self.x0)
+        # self.plotItem.addItem(self.y0)
+
+        # draw origin point (now it will actually sit at the crosshair intersection)
+        # self.origin = pg.ScatterPlotItem([0], [0], symbol='o', size=10)
+        # self.plotItem.addItem(self.origin)
+
+    def _add_origin_axes_with_ticks(self, xlim, ylim, tick_step=1.0, tick_len=0.15):
+        """
+        Draw axes through origin with tick marks and numeric labels.
+        xlim: (xmin, xmax)
+        ylim: (ymin, ymax)
+        tick_step: meters between ticks
+        tick_len: tick length in meters (in plot units)
+        """
+        # Remove old custom tick items if re-running
+        if hasattr(self, "_custom_axis_items"):
+            for it in self._custom_axis_items:
+                try: self.plotItem.removeItem(it)
+                except Exception: pass
+        self._custom_axis_items = []
+
+        # Axes lines through origin
+        x_axis = pg.InfiniteLine(pos=0, angle=0, movable=False)   # y=0
+        y_axis = pg.InfiniteLine(pos=0, angle=90, movable=False)  # x=0
+        self.plotItem.addItem(x_axis)
+        self.plotItem.addItem(y_axis)
+        self._custom_axis_items += [x_axis, y_axis]
+
+        # Tick mark pen
+        pen = pg.mkPen(200, 200, 200)
+
+        xmin, xmax = xlim
+        ymin, ymax = ylim
+
+        # X-axis ticks (along y=0)
+        x_ticks = np.arange(np.ceil(xmin / tick_step) * tick_step,
+                            np.floor(xmax / tick_step) * tick_step + 1e-9,
+                            tick_step)
+        for x in x_ticks:
+            if abs(x) < 1e-9:
+                continue  # skip origin tick (we'll show origin point)
+            tick = pg.PlotDataItem([x, x], [-tick_len/2, tick_len/2], pen=pen)
+            self.plotItem.addItem(tick)
+            self._custom_axis_items.append(tick)
+
+            label = pg.TextItem(f"{x:g}", anchor=(0.5, 1.0), color=(200, 200, 200))
+            label.setPos(x, -0.35)  # slightly below x-axis
+            self.plotItem.addItem(label)
+            self._custom_axis_items.append(label)
+
+        # Y-axis ticks (along x=0)
+        y_ticks = np.arange(np.ceil(ymin / tick_step) * tick_step,
+                            np.floor(ymax / tick_step) * tick_step + 1e-9,
+                            tick_step)
+        for y in y_ticks:
+            if abs(y) < 1e-9:
+                continue
+            tick = pg.PlotDataItem([-tick_len/2, tick_len/2], [y, y], pen=pen)
+            self.plotItem.addItem(tick)
+            self._custom_axis_items.append(tick)
+
+            label = pg.TextItem(f"{y:g}", anchor=(1.0, 0.5), color=(200, 200, 200))
+            label.setPos(-0.35, y)  # slightly left of y-axis
+            self.plotItem.addItem(label)
+            self._custom_axis_items.append(label)
+
+        #  Axis titles ("meters")
+        xlab = pg.TextItem("X (m)", anchor=(0.5, 0.0), color=(220, 220, 220))
+        xlab.setPos((xmin + xmax) / 2, ymin - 0.9)
+        self.plotItem.addItem(xlab)
+
+        ylab = pg.TextItem("Y (m)", anchor=(0.0, 0.5), color=(220, 220, 220))
+        ylab.setPos(xmin - 0.9, (ymin + ymax) / 2)
+        ylab.setAngle(90)
+        self.plotItem.addItem(ylab)
+
+        self._custom_axis_items += [xlab, ylab]
+
+
 
     def setData(self, x, y):
         self.plotDataItem.setData(x, y)
@@ -357,6 +461,17 @@ class MyWidget(pg.GraphicsLayoutWidget):
     def onNewData(self):
         _, newx, newy = self.updateData()
         self.setData(newx, newy)
+
+        self._t0 = getattr(self, "_t0", time.time())
+
+        if time.time() - self._t0 > 1.0:
+            self._t0 = time.time()
+            if len(newx) > 0:
+                r_xy = np.sqrt(np.array(newx)**2 + np.array(newy)**2)
+                print("min/max x:", float(np.min(newx)), float(np.max(newx)),
+                      "min/max y:", float(np.min(newy)), float(np.max(newy)),
+                      "min/max range:", float(np.min(r_xy)), float(np.max(r_xy)))
+
 
 
 def main():

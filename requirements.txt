@@ -1,0 +1,5 @@
+numpy
+pyserial
+open3d
+pyqt5
+pyqtgraph

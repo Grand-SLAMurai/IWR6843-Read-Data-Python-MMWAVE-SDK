@@ -48,10 +48,10 @@ def getUint32(data):
         @param data : 1-demension byte array  
         @return     : 32-bit unsigned integer
     """ 
-    return (data[0] +
-            data[1]*256 +
-            data[2]*65536 +
-            data[3]*16777216)
+    return (int(data[0]) +
+            (int(data[1]) << 8) +
+            (int(data[2]) << 16) +
+            (int(data[3]) << 24))
 
 def getUint16(data):
     """!
@@ -60,8 +60,7 @@ def getUint16(data):
         @param data : 1-demension byte array
         @return     : 16-bit unsigned integer
     """ 
-    return (data[0] +
-            data[1]*256)
+    return int(data[0]) + (int(data[1]) << 8)
 
 def getHex(data):
     """!

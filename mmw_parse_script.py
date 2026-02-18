@@ -162,7 +162,13 @@ def readAndParseData14xx(Dataport, configParameters):
     frameNumber = 0
     detObj = {}
 
-    readBuffer = Dataport.read(Dataport.in_waiting)
+    # readBuffer = Dataport.read(Dataport.in_waiting)
+    # chat recommended this change
+    n = Dataport.in_waiting
+    if n < 32:
+        n = 32
+    readBuffer = Dataport.read(n)
+
     byteVec = np.frombuffer(readBuffer, dtype = 'uint8')
     byteCount = len(byteVec)
 
@@ -207,9 +213,14 @@ def readAndParseData14xx(Dataport, configParameters):
     if magicOK:
         # Read the entire buffer
         readNumBytes = byteBufferLength
+
         if(DEBUG):
             print("readNumBytes: ", readNumBytes)
-        allBinData = byteBuffer
+
+        # chat recommended this change
+        allBinData = byteBuffer[:byteBufferLength]
+        # allBinData = byteBuffer
+
         if(DEBUG):
             print("allBinData: ", allBinData[0], allBinData[1], allBinData[2], allBinData[3])
 

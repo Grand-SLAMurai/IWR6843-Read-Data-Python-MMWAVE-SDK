@@ -19,4 +19,9 @@ TO RUN:
 python -m pip install pyserial numpy pyqt5 pyqtgraph
 ```
 
-Will write more later
+### Edit script
+Make sure the `COM` ports are selected to the correct ports in the `mmw_parse_script.py` file. Find these in the device manager. More information here: [https://dev.ti.com/tirex/explore/node?isTheia=false&node=A__AOJgwAYscJOUPEaB-c-y7A__radar_toolbox__1AslXXD__2.20.00.05](https://dev.ti.com/tirex/explore/node?isTheia=false&node=A__AOJgwAYscJOUPEaB-c-y7A__radar_toolbox__1AslXXD__2.20.00.05)
+
+### Run
+1. Make sure no other program is using the needed COM ports.
+2. 

@@ -86,8 +86,8 @@ def serialConfig(configFileName):
     #Dataport = serial.Serial('/dev/ttyACM1', 921600)
     
     # Windows
-    CLIport = serial.Serial('COM6', 115200)
-    Dataport = serial.Serial('COM5', 921600)
+    CLIport = serial.Serial('COM3', 115200)
+    Dataport = serial.Serial('COM4', 921600)
 
     # Read the configuration file and send it to the board
     config = [line.rstrip('\r\n') for line in open(configFileName)]
@@ -294,82 +294,68 @@ def readAndParseData14xx(Dataport, configParameters):
     return dataOK, frameNumber, detObj
 
 
-class MyWidget(pg.GraphicsWindow):
+import pyqtgraph as pg
+from PyQt5 import QtWidgets, QtCore
 
+class MyWidget(pg.GraphicsLayoutWidget):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
-        self.mainLayout = QtWidgets.QVBoxLayout()
-        self.setLayout(self.mainLayout)
-
-        self.timer = QtCore.QTimer(self)
-        self.timer.setInterval(100) # in milliseconds
-        self.timer.start()
-        self.timer.timeout.connect(self.onNewData)
-
+        # Plot
         self.plotItem = self.addPlot(title="Lidar points")
+        self.plotItem.setLabel('bottom', 'X (m)')
+        self.plotItem.setLabel('left', 'Y (m)')
 
-        self.plotDataItem = self.plotItem.plot([], pen=None, 
-            symbolBrush=(255,0,0), symbolSize=5, symbolPen=None)
+        self.plotDataItem = self.plotItem.plot(
+            [], [], pen=None,
+            symbolBrush=(255, 0, 0), symbolSize=5, symbolPen=None
+        )
 
+        # Timer
+        self.timer = QtCore.QTimer(self)
+        self.timer.setInterval(100)  # ms
+        self.timer.timeout.connect(self.onNewData)
+        self.timer.start()
 
     def setData(self, x, y):
         self.plotDataItem.setData(x, y)
 
-    # Funtion to update the data and display in the plot
-    def update(self):
-        
-        dataOk = 0
+    def updateData(self):
         global detObj
         x = []
         y = []
-        
-        # Read and parse the received data
+
         dataOk, frameNumber, detObj = readAndParseData14xx(Dataport, configParameters)
-        if dataOk and len(detObj["x"]) > 0:
-            #print(detObj)
+        if dataOk and ("x" in detObj) and (len(detObj["x"]) > 0):
             x = detObj["x"]
             y = detObj["y"]
 
         return dataOk, x, y
 
-
     def onNewData(self):
-        
-        # Update the data and check if the data is okay        
-        dataOk,newx,newy = self.update()
-
-        #if dataOk:
-            # Store the current frame into frameData
-            #frameData[currentIndex] = detObj
-            #currentIndex += 1
-        
-        x = newx
-        y = newy
-        self.setData(x, y)
+        _, newx, newy = self.updateData()
+        self.setData(newx, newy)
 
 
-def main():        
-    # Configurate the serial port
+def main():
     CLIport, Dataport = serialConfig(configFileName)
 
-    # Get the configuration parameters from the configuration file
-    global configParameters 
+    global configParameters
     configParameters = parseConfigFile(configFileName)
 
     app = QtWidgets.QApplication([])
 
-    pg.setConfigOptions(antialias=False) # True seems to work as well
+    pg.setConfigOptions(antialias=False)
 
     win = MyWidget()
     win.show()
-    win.resize(800,600) 
-    win.raise_()
+    win.resize(800, 600)
+
     app.exec_()
+
     CLIport.write(('sensorStop\n').encode())
     CLIport.close()
     Dataport.close()
-
 
 
 if __name__ == "__main__":

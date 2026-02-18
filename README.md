@@ -6,3 +6,17 @@ This is a modified version of the code created by ibaiGorordo (https://github.co
 This code was also developed using the MMWAVE SDK version 3.05.00.04 parser demo scripts provided by Texas Instruments.
 
 
+TO RUN:
+---
+
+### Download dependenciesa (could venv)
+- `numpy`
+- `pyserial`
+- `PyQt5`
+- `pyqtgraph`
+
+```shell
+python -m pip install pyserial numpy pyqt5 pyqtgraph
+```
+
+Will write more later

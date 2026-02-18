@@ -13,15 +13,15 @@ TO RUN:
 
 1. Use Python 3.12 (download [here](https://www.python.org/downloads/release/python-3120/), need for Open3D version)
 2. Create virtual environment
-```shell
+```bash
 py -3.12 -m venv .venv
 ```
 3. Activate virtual environment
-```shell
+```bash
 .\.venv\Scripts\Activate.ps1
 ```
 4. Install requirements
-```shell
+```bash
 python -m pip install -r requirements.txt
 ```
 
@@ -31,10 +31,10 @@ Make sure the `COM` ports are selected to the correct ports in the `mmw_parse_sc
 ### Run
 1. Make sure no other program is using the needed COM ports.
 2. Run python script for 2D
-```shell
+```bash
 python mmw_parse_script.py
 ```
 3. Run python script for 3D
-```shell
+```bash
 python 3D_mmw_parse_script.py
 ```
